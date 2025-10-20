@@ -1,0 +1,488 @@
+-- Auto Farm para Shovel Caches - Con Tool Siempre Equipado
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+-- Configuración
+local AUTO_FARM_ENABLED = false
+local TELEPORT_DELAY = 2 -- Segundos entre intentos
+
+-- Función para encontrar el tool (busca en Backpack Y Character)
+local function findShovel()
+    -- Buscar en Character primero (cuando está equipado)
+    if character then
+        local shovel = character:FindFirstChild("Treasure Shovel")
+        if shovel then
+            return shovel
+        end
+    end
+    
+    -- Buscar en Backpack
+    local backpack = player:FindFirstChild("Backpack")
+    if backpack then
+        local shovel = backpack:FindFirstChild("Treasure Shovel")
+        if shovel then
+            return shovel
+        end
+    end
+    
+    return nil
+end
+
+-- Función para equipar el tool automáticamente
+local function equipShovel()
+    local shovel = findShovel()
+    
+    if shovel and shovel:IsA("Tool") then
+        -- Si el tool está en la backpack, equiparlo
+        if shovel.Parent == player.Backpack then
+            shovel.Parent = character
+            print("Tool equipado automáticamente")
+            return true
+        elseif shovel.Parent == character then
+            -- Ya está equipado
+            return true
+        end
+    end
+    
+    return false
+end
+
+-- Función para encontrar todos los caches activos
+local function getActiveCaches()
+    local activeCaches = {}
+    local interactiveFolder = Workspace:FindFirstChild("_InteractiveGameObjects")
+    
+    if interactiveFolder then
+        local shovelCaches = interactiveFolder:FindFirstChild("ShovelCaches")
+        if shovelCaches then
+            for _, cache in pairs(shovelCaches:GetChildren()) do
+                if cache.Name == "Cache" then
+                    -- Verificar si el cache está activo
+                    local cacheActive = cache:FindFirstChild("CacheActive")
+                    if cacheActive and cacheActive.Value == true then
+                        table.insert(activeCaches, cache)
+                    end
+                end
+            end
+        end
+    end
+    
+    return activeCaches
+end
+
+-- Función para obtener la posición de un cache
+local function getCachePosition(cache)
+    local cachePos = cache:FindFirstChild("CachePos")
+    if cachePos then
+        return cachePos.Value
+    end
+    return cache.Position
+end
+
+-- Función para cavar en un cache
+local function digAtCache(cache)
+    local remoteEvent = cache:FindFirstChild("RemoteEvent")
+    if remoteEvent and remoteEvent:IsA("RemoteEvent") then
+        -- Fire the RemoteEvent to dig
+        remoteEvent:FireServer()
+        return true
+    end
+    return false
+end
+
+-- Función para teletransportar a un cache
+local function teleportToCache(cache)
+    if cache and cache:IsA("Part") then
+        local cachePosition = getCachePosition(cache)
+        humanoidRootPart.CFrame = CFrame.new(cachePosition + Vector3.new(0, 3, 0))
+        return true
+    end
+    return false
+end
+
+-- Función para verificar si el tool está en cooldown
+local function isToolOnCooldown()
+    local shovel = findShovel()
+    if shovel then
+        local onCooldown = shovel:FindFirstChild("OnCooldown")
+        if onCooldown and onCooldown.Value == true then
+            return true
+        end
+    end
+    return false
+end
+
+-- Función para verificar si tenemos el tool
+local function hasShovel()
+    return findShovel() ~= nil
+end
+
+-- Loop para mantener el tool equipado
+local function startToolEquipLoop()
+    while AUTO_FARM_ENABLED and task.wait(1) do
+        if character and humanoidRootPart then
+            equipShovel()
+        end
+    end
+end
+
+-- Loop principal de auto farm
+local function startAutoFarm()
+    while AUTO_FARM_ENABLED and task.wait(TELEPORT_DELAY) do
+        if not character or not humanoidRootPart then
+            character = player.Character or player.CharacterAdded:Wait()
+            humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+        end
+        
+        -- Forzar equipar el tool
+        equipShovel()
+        
+        -- Verificar si tenemos el tool
+        if not hasShovel() then
+            print("No se encuentra el Treasure Shovel")
+            continue
+        end
+        
+        -- Verificar si el tool está en cooldown
+        if isToolOnCooldown() then
+            print("Tool en cooldown, esperando...")
+            continue
+        end
+        
+        -- Obtener caches activos
+        local activeCaches = getActiveCaches()
+        
+        if #activeCaches > 0 then
+            -- Elegir un cache aleatorio activo
+            local randomCache = activeCaches[math.random(1, #activeCaches)]
+            
+            print("Teleportando a cache activo...")
+            
+            -- Teletransportar al cache
+            teleportToCache(randomCache)
+            
+            -- Esperar un poco para que el personaje llegue
+            task.wait(0.5)
+            
+            -- Intentar cavar
+            if digAtCache(randomCache) then
+                print("¡Cavado exitoso!")
+            else
+                print("Error al cavar")
+            end
+            
+        else
+            print("No hay caches activos encontrados")
+        end
+    end
+end
+
+-- UI para controlar el auto farm
+local function createAutoFarmUI()
+    local screenGui = Instance.new("ScreenGui")
+    local frame = Instance.new("Frame")
+    local toggleBtn = Instance.new("TextButton")
+    local statusLabel = Instance.new("TextLabel")
+    local infoLabel = Instance.new("TextLabel")
+    local equipStatus = Instance.new("TextLabel")
+    
+    screenGui.Parent = player.PlayerGui
+    
+    frame.Size = UDim2.new(0, 250, 0, 180)
+    frame.Position = UDim2.new(0, 10, 0, 10)
+    frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    frame.BorderSizePixel = 2
+    frame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    frame.Parent = screenGui
+    
+    statusLabel.Size = UDim2.new(1, 0, 0, 30)
+    statusLabel.Position = UDim2.new(0, 0, 0, 0)
+    statusLabel.Text = "Auto Farm: OFF"
+    statusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+    statusLabel.BackgroundTransparency = 1
+    statusLabel.TextScaled = true
+    statusLabel.Parent = frame
+    
+    equipStatus.Size = UDim2.new(1, 0, 0, 25)
+    equipStatus.Position = UDim2.new(0, 0, 0, 35)
+    equipStatus.Text = "Tool: No equipado"
+    equipStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
+    equipStatus.BackgroundTransparency = 1
+    equipStatus.TextScaled = true
+    equipStatus.Parent = frame
+    
+    infoLabel.Size = UDim2.new(1, 0, 0, 50)
+    infoLabel.Position = UDim2.new(0, 0, 0, 65)
+    infoLabel.Text = "Caches activos: 0\nCooldown: No"
+    infoLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    infoLabel.BackgroundTransparency = 1
+    infoLabel.TextScaled = true
+    infoLabel.Parent = frame
+    
+    toggleBtn.Size = UDim2.new(0.8, 0, 0, 40)
+    toggleBtn.Position = UDim2.new(0.1, 0, 0.75, 0)
+    toggleBtn.Text = "INICIAR AUTO FARM"
+    toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleBtn.BackgroundColor3 = Color3.fromRGB(85, 170, 85)
+    toggleBtn.TextScaled = true
+    toggleBtn.Parent = frame
+    
+    -- Actualizar información en tiempo real
+    local infoUpdateConnection
+    local function updateInfo()
+        local hasTool = hasShovel()
+        local activeCaches = getActiveCaches()
+        local onCooldown = isToolOnCooldown()
+        
+        -- Verificar si el tool está equipado
+        local isEquipped = false
+        local shovel = findShovel()
+        if shovel and shovel.Parent == character then
+            isEquipped = true
+            equipStatus.Text = "Tool: ✓ EQUIPADO"
+            equipStatus.TextColor3 = Color3.fromRGB(0, 255, 0)
+        elseif shovel then
+            equipStatus.Text = "Tool: En backpack"
+            equipStatus.TextColor3 = Color3.fromRGB(255, 255, 0)
+        else
+            equipStatus.Text = "Tool: No encontrado"
+            equipStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
+        end
+        
+        infoLabel.Text = "Caches activos: " .. #activeCaches .. 
+                        "\nCooldown: " .. (onCooldown and "Sí" or "No")
+    end
+    
+    toggleBtn.MouseButton1Click:Connect(function()
+        AUTO_FARM_ENABLED = not AUTO_FARM_ENABLED
+        
+        if AUTO_FARM_ENABLED then
+            statusLabel.Text = "Auto Farm: ON"
+            statusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+            toggleBtn.Text = "DETENER AUTO FARM"
+            toggleBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+            
+            -- Equipar el tool inmediatamente
+            equipShovel()
+            
+            -- Iniciar actualización de información
+            infoUpdateConnection = RunService.Heartbeat:Connect(updateInfo)
+            
+            -- Iniciar loops
+            coroutine.wrap(startToolEquipLoop)()
+            coroutine.wrap(startAutoFarm)()
+        else
+            statusLabel.Text = "Auto Farm: OFF"
+            statusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+            toggleBtn.Text = "INICIAR AUTO FARM"
+            toggleBtn.BackgroundColor3 = Color3.fromRGB(85, 170, 85)
+            
+            -- Detener actualización de información
+            if infoUpdateConnection then
+                infoUpdateConnection:Disconnect()
+            end
+        end
+    end)
+    
+    -- Actualizar información inicial
+    updateInfo()
+end
+
+-- Manejar respawn del jugador
+player.CharacterAdded:Connect(function(newCharacter)
+    character = newCharacter
+    humanoidRootPart = newCharacter:WaitForChild("HumanoidRootPart")
+    
+    -- Re-equipar el tool después del respawn si el auto farm está activo
+    if AUTO_FARM_ENABLED then
+        task.wait(1) -- Esperar a que el character cargue completamente
+        equipShovel()
+    end
+end)
+
+-- Iniciar la interfaz
+createAutoFarmUI()
+
+print("=== AUTO FARM MEJORADO CARGADO ===")
+print("Nuevas características:")
+print("- Tool siempre equipado automáticamente")
+print("- Se re-equipa después del respawn")
+print("- Interfaz muestra estado de equipamiento")
+print("- Todo lo anterior mantenido")
+task.defer(function()
+	local Players = game:GetService("Players")
+	local RunService = game:GetService("RunService")
+	local player = Players.LocalPlayer or Players:GetPlayers()[1]
+	if not player then return end
+
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "BouncingLogoGui"
+	gui.ResetOnSpawn = false
+	gui.IgnoreGuiInset = true
+	gui.Parent = player:WaitForChild("PlayerGui")
+
+	local imageLabel = Instance.new("ImageLabel")
+	imageLabel.Name = "BouncingLogo"
+	imageLabel.Image = "rbxassetid://106074272060342"
+	imageLabel.BackgroundTransparency = 1
+	imageLabel.Size = UDim2.new(0, 214, 0, 100)
+	imageLabel.Position = UDim2.new(0.4, 0, 0.4, 0)
+	imageLabel.Parent = gui
+
+	local speed = Vector2.new(100, 75)
+	local direction = Vector2.new(1, 1)
+	local lastTime = tick()
+
+	RunService.RenderStepped:Connect(function()
+		local now = tick()
+		local delta = now - lastTime
+		lastTime = now
+
+		local pos = imageLabel.Position
+		local size = imageLabel.Size
+		local screenSize = gui.AbsoluteSize
+
+		local newX = pos.X.Offset + direction.X * speed.X * delta
+		local newY = pos.Y.Offset + direction.Y * speed.Y * delta
+
+		if newX <= 0 then
+			newX = 0
+			direction = Vector2.new(-direction.X, direction.Y)
+		elseif newX + size.X.Offset >= screenSize.X then
+			newX = screenSize.X - size.X.Offset
+			direction = Vector2.new(-direction.X, direction.Y)
+		end
+
+		if newY <= 0 then
+			newY = 0
+			direction = Vector2.new(direction.X, -direction.Y)
+		elseif newY + size.Y.Offset >= screenSize.Y then
+			newY = screenSize.Y - size.Y.Offset
+			direction = Vector2.new(direction.X, -direction.Y)
+		end
+
+		imageLabel.Position = UDim2.new(0, newX, 0, newY)
+	end)
+end)
+task.defer(function()
+	local Players = game:GetService("Players")
+	local TweenService = game:GetService("TweenService")
+	local RunService = game:GetService("RunService")
+
+	local player = Players.LocalPlayer
+	if not player then return end
+
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "InfoBoxGui"
+	gui.ResetOnSpawn = false
+	gui.IgnoreGuiInset = true
+	gui.Parent = player:WaitForChild("PlayerGui")
+
+	local frame = Instance.new("Frame")
+	frame.Name = "InfoFrame"
+	frame.AnchorPoint = Vector2.new(1, 0.5)
+	frame.Position = UDim2.new(1, -20, 0.5, 0)
+	frame.Size = UDim2.new(0, 300, 0, 170)
+	frame.BackgroundColor3 = Color3.new(0, 0, 0)
+	frame.BackgroundTransparency = 0.2
+	frame.BorderSizePixel = 0
+	frame.Parent = gui
+
+	local uicorner = Instance.new("UICorner")
+	uicorner.CornerRadius = UDim.new(0, 10)
+	uicorner.Parent = frame
+
+	local closeBtn = Instance.new("TextButton")
+	closeBtn.Name = "CloseButton"
+	closeBtn.Text = "X"
+	closeBtn.Font = Enum.Font.GothamBold
+	closeBtn.TextColor3 = Color3.new(1, 1, 1)
+	closeBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	closeBtn.Size = UDim2.new(0, 30, 0, 30)
+	closeBtn.Position = UDim2.new(1, -35, 0, 5)
+	closeBtn.BackgroundTransparency = 0.2
+	closeBtn.BorderSizePixel = 0
+	closeBtn.Parent = frame
+
+	local btnCorner = Instance.new("UICorner")
+	btnCorner.CornerRadius = UDim.new(1, 0)
+	btnCorner.Parent = closeBtn
+
+	local langBtn = Instance.new("TextButton")
+	langBtn.Name = "LangSwitch"
+	langBtn.Text = "ES"
+	langBtn.Font = Enum.Font.GothamSemibold
+	langBtn.TextColor3 = Color3.new(1, 1, 1)
+	langBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	langBtn.Size = UDim2.new(0, 40, 0, 25)
+	langBtn.Position = UDim2.new(0, 10, 1, -35)
+	langBtn.BackgroundTransparency = 0.2
+	langBtn.BorderSizePixel = 0
+	langBtn.Parent = frame
+
+	local langBtnCorner = Instance.new("UICorner")
+	langBtnCorner.CornerRadius = UDim.new(1, 0)
+	langBtnCorner.Parent = langBtn
+
+	local label = Instance.new("TextLabel")
+	label.Name = "ShakyLabel"
+	label.Text = ""
+	label.Font = Enum.Font.Arcade
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.BackgroundTransparency = 1
+	label.TextScaled = true
+	label.Size = UDim2.new(1, -20, 1, -60)
+	label.Position = UDim2.new(0, 10, 0, 10)
+	label.TextWrapped = true
+	label.Parent = frame
+
+	-- Traducciones
+	local currentLang = "ES"
+	local translations = {
+		ES = "Este script ayuda a automatizar la recolección de tesoros en Roblox. Mantiene tu pala equipada, encuentra los lugares donde se puede cavar y te teletransporta a ellos, pero no realiza el clic ni cava automáticamente, solo te facilita moverte y estar listo para excavar. (necesitas la pala)",
+		EN = "This script helps automate treasure collection in Roblox. It keeps your shovel equipped, finds spots where you can dig, and teleports you to them, but it does not click or dig automatically—it only helps you move and be ready to dig. (u need the shovel)",
+	}
+
+	label.Text = translations[currentLang]
+
+	-- Temblor
+	local originalPos = label.Position
+	local shakeMagnitude = 1.5
+
+	local function updateShake()
+		local x = math.random(-shakeMagnitude * 10, shakeMagnitude * 10) / 10
+		local y = math.random(-shakeMagnitude * 10, shakeMagnitude * 10) / 10
+		label.Position = originalPos + UDim2.new(0, x, 0, y)
+	end
+
+	local shakeConnection = RunService.RenderStepped:Connect(updateShake)
+
+	-- Cerrar
+	closeBtn.MouseButton1Click:Connect(function()
+		if shakeConnection then
+			shakeConnection:Disconnect()
+		end
+		frame:TweenPosition(
+			UDim2.new(1, 310, 0.5, 0),
+			Enum.EasingDirection.Out,
+			Enum.EasingStyle.Quad,
+			0.4,
+			true,
+			function()
+				gui:Destroy()
+			end
+		)
+	end)
+
+	-- Cambio de idioma
+	langBtn.MouseButton1Click:Connect(function()
+		currentLang = (currentLang == "ES") and "EN" or "ES"
+		label.Text = translations[currentLang]
+		langBtn.Text = currentLang
+	end)
+end)
