@@ -1,0 +1,274 @@
+-- 🌀 AUTO FARM GUI con traducción EN/ES, movimiento libre, créditos y logo animado
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local Player = Players.LocalPlayer
+local char = Player.Character or Player.CharacterAdded:Wait()
+local hrp = char:WaitForChild("HumanoidRootPart")
+
+-----------------------------------------------------
+-- 🔹 AUTO FARM GUI
+-----------------------------------------------------
+
+local items = {"Tape", "Ticket", "Gift", "Coin", "PotOGold"}
+local enabled = {Tape=true, Ticket=true, Gift=true, Coin=true, PotOGold=true}
+local farming = false
+local language = "EN" -- Idioma inicial
+
+local texts = {
+	EN = {
+		Title = "Auto Farm Control",
+		MainOn = "Auto Farm: ON",
+		MainOff = "Auto Farm: OFF",
+		ItemOn = "ON",
+		ItemOff = "OFF",
+		Translate = "Language: EN",
+	},
+	ES = {
+		Title = "Control de Auto Farm",
+		MainOn = "Auto Farm: ACTIVADO",
+		MainOff = "Auto Farm: DESACTIVADO",
+		ItemOn = "SÍ",
+		ItemOff = "NO",
+		Translate = "Idioma: ES",
+	}
+}
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "AutoFarmGUI"
+gui.ResetOnSpawn = false
+gui.Parent = Player:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 260, 0, 300)
+frame.Position = UDim2.new(0.65, 0, 0.25, 0) -- movido a la izquierda para dejar espacio al logo
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.BackgroundTransparency = 0.15
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+frame.Parent = gui
+
+local uiCorner = Instance.new("UICorner", frame)
+uiCorner.CornerRadius = UDim.new(0, 12)
+
+local title = Instance.new("TextLabel")
+title.Text = texts[language].Title
+title.Size = UDim2.new(1, 0, 0, 40)
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 20
+title.Parent = frame
+
+local langButton = Instance.new("TextButton")
+langButton.Size = UDim2.new(0.5, -10, 0, 30)
+langButton.Position = UDim2.new(0.5, 5, 0, 5)
+langButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+langButton.TextColor3 = Color3.new(1, 1, 1)
+langButton.Font = Enum.Font.Gotham
+langButton.TextSize = 14
+langButton.Text = texts[language].Translate
+langButton.Parent = frame
+Instance.new("UICorner", langButton).CornerRadius = UDim.new(0, 8)
+
+local function updateLanguage()
+	title.Text = texts[language].Title
+	toggleFarm.Text = farming and texts[language].MainOn or texts[language].MainOff
+	for _, btn in ipairs(frame:GetChildren()) do
+		if btn:IsA("TextButton") and btn.Name:match("^btn_") then
+			local itemName = btn.Name:match("btn_(.+)")
+			btn.Text = itemName .. ": " .. (enabled[itemName] and texts[language].ItemOn or texts[language].ItemOff)
+		end
+	end
+	langButton.Text = texts[language].Translate
+end
+
+langButton.MouseButton1Click:Connect(function()
+	language = (language == "EN") and "ES" or "EN"
+	updateLanguage()
+end)
+
+local y = 45
+for _, name in ipairs(items) do
+	local button = Instance.new("TextButton")
+	button.Name = "btn_" .. name
+	button.Size = UDim2.new(1, -20, 0, 30)
+	button.Position = UDim2.new(0, 10, 0, y)
+	button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+	button.TextColor3 = Color3.new(1, 1, 1)
+	button.Font = Enum.Font.Gotham
+	button.TextSize = 16
+	button.Text = name .. ": " .. texts[language].ItemOn
+	button.Parent = frame
+	Instance.new("UICorner", button).CornerRadius = UDim.new(0, 8)
+
+	button.MouseButton1Click:Connect(function()
+		enabled[name] = not enabled[name]
+		button.Text = name .. ": " .. (enabled[name] and texts[language].ItemOn or texts[language].ItemOff)
+		button.BackgroundColor3 = enabled[name] and Color3.fromRGB(45, 120, 45) or Color3.fromRGB(120, 45, 45)
+	end)
+	y += 35
+end
+
+toggleFarm = Instance.new("TextButton")
+toggleFarm.Size = UDim2.new(1, -20, 0, 40)
+toggleFarm.Position = UDim2.new(0, 10, 0, y + 10)
+toggleFarm.BackgroundColor3 = Color3.fromRGB(120, 50, 50)
+toggleFarm.TextColor3 = Color3.new(1, 1, 1)
+toggleFarm.Font = Enum.Font.GothamBold
+toggleFarm.TextSize = 18
+toggleFarm.Text = texts[language].MainOff
+toggleFarm.Parent = frame
+Instance.new("UICorner", toggleFarm).CornerRadius = UDim.new(0, 8)
+
+toggleFarm.MouseButton1Click:Connect(function()
+	farming = not farming
+	toggleFarm.Text = farming and texts[language].MainOn or texts[language].MainOff
+	toggleFarm.BackgroundColor3 = farming and Color3.fromRGB(30, 120, 30) or Color3.fromRGB(120, 50, 50)
+end)
+
+task.spawn(function()
+	while true do
+		if farming and char and hrp then
+			for _, name in ipairs(items) do
+				if enabled[name] then
+					local obj = game.Workspace:FindFirstChild(name)
+					if obj and obj:IsA("BasePart") then
+						obj.CFrame = hrp.CFrame
+					end
+				end
+			end
+		end
+		task.wait(0)
+	end
+end)
+
+-----------------------------------------------------
+-- 🌟 LOGO REBOTANDO (CREDITOS VISUALES)
+-----------------------------------------------------
+task.defer(function()
+	local RunService = game:GetService("RunService")
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "BouncingLogoGui"
+	gui.ResetOnSpawn = false
+	gui.IgnoreGuiInset = true
+	gui.Parent = Player:WaitForChild("PlayerGui")
+
+	local imageLabel = Instance.new("ImageLabel")
+	imageLabel.Image = "rbxassetid://106074272060342"
+	imageLabel.BackgroundTransparency = 1
+	imageLabel.Size = UDim2.new(0, 214, 0, 100)
+	imageLabel.Position = UDim2.new(0.75, 0, 0.05, 0)
+	imageLabel.Parent = gui
+
+	local speed = Vector2.new(100, 75)
+	local direction = Vector2.new(1, 1)
+	local lastTime = tick()
+
+	RunService.RenderStepped:Connect(function()
+		local now = tick()
+		local delta = now - lastTime
+		lastTime = now
+
+		local pos = imageLabel.Position
+		local size = imageLabel.Size
+		local screenSize = gui.AbsoluteSize
+
+		local newX = pos.X.Offset + direction.X * speed.X * delta
+		local newY = pos.Y.Offset + direction.Y * speed.Y * delta
+
+		if newX <= 0 or newX + size.X.Offset >= screenSize.X then
+			direction = Vector2.new(-direction.X, direction.Y)
+		end
+		if newY <= 0 or newY + size.Y.Offset >= screenSize.Y then
+			direction = Vector2.new(direction.X, -direction.Y)
+		end
+
+		imageLabel.Position = UDim2.new(0, newX, 0, newY)
+	end)
+end)
+
+-----------------------------------------------------
+-- 📜 INFOBOX / CRÉDITOS (EN & ES)
+-----------------------------------------------------
+task.defer(function()
+	local TweenService = game:GetService("TweenService")
+
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "InfoBoxGui"
+	gui.ResetOnSpawn = false
+	gui.IgnoreGuiInset = true
+	gui.Parent = Player:WaitForChild("PlayerGui")
+
+	local frame = Instance.new("Frame")
+	frame.Name = "InfoFrame"
+	frame.AnchorPoint = Vector2.new(1, 0.5)
+	frame.Position = UDim2.new(1, -20, 0.5, 0)
+	frame.Size = UDim2.new(0, 300, 0, 170)
+	frame.BackgroundColor3 = Color3.new(0, 0, 0)
+	frame.BackgroundTransparency = 0.2
+	frame.BorderSizePixel = 0
+	frame.Parent = gui
+	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
+
+	local closeBtn = Instance.new("TextButton")
+	closeBtn.Text = "X"
+	closeBtn.Font = Enum.Font.GothamBold
+	closeBtn.TextColor3 = Color3.new(1, 1, 1)
+	closeBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	closeBtn.Size = UDim2.new(0, 30, 0, 30)
+	closeBtn.Position = UDim2.new(1, -35, 0, 5)
+	closeBtn.BackgroundTransparency = 0.2
+	closeBtn.BorderSizePixel = 0
+	closeBtn.Parent = frame
+	Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(1, 0)
+
+	local langBtn = Instance.new("TextButton")
+	langBtn.Text = "ES"
+	langBtn.Font = Enum.Font.GothamSemibold
+	langBtn.TextColor3 = Color3.new(1, 1, 1)
+	langBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	langBtn.Size = UDim2.new(0, 40, 0, 25)
+	langBtn.Position = UDim2.new(0, 10, 1, -35)
+	langBtn.BackgroundTransparency = 0.2
+	langBtn.BorderSizePixel = 0
+	langBtn.Parent = frame
+	Instance.new("UICorner", langBtn).CornerRadius = UDim.new(1, 0)
+
+	local label = Instance.new("TextLabel")
+	label.Font = Enum.Font.Arcade
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.BackgroundTransparency = 1
+	label.TextScaled = true
+	label.Size = UDim2.new(1, -20, 1, -60)
+	label.Position = UDim2.new(0, 10, 0, 10)
+	label.TextWrapped = true
+	label.Parent = frame
+
+	local currentLang = "ES"
+	local translations = {
+		ES = "Este script te permite recoger objetos (Tape, Ticket, Gift, Coin, PotOGold) automáticamente y activar o desactivar cada uno con botones.",
+		EN = "This script lets you automatically collect items (Tape, Ticket, Gift, Coin, PotOGold) and toggle each one individually.",
+	}
+	label.Text = translations[currentLang]
+
+	local originalPos = label.Position
+	RunService.RenderStepped:Connect(function()
+		label.Position = originalPos + UDim2.new(0, math.random(-2, 2), 0, math.random(-2, 2))
+	end)
+
+	closeBtn.MouseButton1Click:Connect(function()
+		frame:TweenPosition(UDim2.new(1, 310, 0.5, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.4, true, function()
+			gui:Destroy()
+		end)
+	end)
+
+	langBtn.MouseButton1Click:Connect(function()
+		currentLang = (currentLang == "ES") and "EN" or "ES"
+		label.Text = translations[currentLang]
+		langBtn.Text = currentLang
+	end)
+end)
