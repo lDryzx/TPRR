@@ -1,0 +1,320 @@
+
+local ScriptStarted = false
+local Keybind = "G" --Set to whatever you want, has to be the name of a KeyCode Enum.
+local Transparency = true --Will make you slightly transparent when you are invisible. No reason to disable.
+local NoClip = false --Will make your fake character no clip.
+
+local Player = game:GetService("Players").LocalPlayer
+local RealCharacter = Player.Character or Player.CharacterAdded:Wait()
+
+local IsInvisible = false
+
+RealCharacter.Archivable = true
+local FakeCharacter = RealCharacter:Clone()
+local Part
+Part = Instance.new("Part", workspace)
+Part.Anchored = true
+Part.Size = Vector3.new(200, 1, 200)
+Part.CFrame = CFrame.new(0, -500, 0) --Set this to whatever you want, just far away from the map.
+Part.CanCollide = true
+FakeCharacter.Parent = workspace
+FakeCharacter.HumanoidRootPart.CFrame = Part.CFrame * CFrame.new(0, 5, 0)
+
+for i, v in pairs(RealCharacter:GetChildren()) do
+  if v:IsA("LocalScript") then
+      local clone = v:Clone()
+      clone.Disabled = true
+      clone.Parent = FakeCharacter
+  end
+end
+if Transparency then
+  for i, v in pairs(FakeCharacter:GetDescendants()) do
+      if v:IsA("BasePart") then
+          v.Transparency = 0.7
+      end
+  end
+end
+local CanInvis = true
+function RealCharacterDied()
+  CanInvis = false
+  RealCharacter:Destroy()
+  RealCharacter = Player.Character
+  CanInvis = true
+  isinvisible = false
+  FakeCharacter:Destroy()
+  workspace.CurrentCamera.CameraSubject = RealCharacter.Humanoid
+
+  RealCharacter.Archivable = true
+  FakeCharacter = RealCharacter:Clone()
+  Part:Destroy()
+  Part = Instance.new("Part", workspace)
+  Part.Anchored = true
+  Part.Size = Vector3.new(200, 1, 200)
+  Part.CFrame = CFrame.new(9999, 9999, 9999) --Set this to whatever you want, just far away from the map.
+  Part.CanCollide = true
+  FakeCharacter.Parent = workspace
+  FakeCharacter.HumanoidRootPart.CFrame = Part.CFrame * CFrame.new(0, 5, 0)
+
+  for i, v in pairs(RealCharacter:GetChildren()) do
+      if v:IsA("LocalScript") then
+          local clone = v:Clone()
+          clone.Disabled = true
+          clone.Parent = FakeCharacter
+      end
+  end
+  if Transparency then
+      for i, v in pairs(FakeCharacter:GetDescendants()) do
+          if v:IsA("BasePart") then
+              v.Transparency = 0.7
+          end
+      end
+  end
+ RealCharacter.Humanoid.Died:Connect(function()
+ RealCharacter:Destroy()
+ FakeCharacter:Destroy()
+ end)
+ Player.CharacterAppearanceLoaded:Connect(RealCharacterDied)
+end
+RealCharacter.Humanoid.Died:Connect(function()
+ RealCharacter:Destroy()
+ FakeCharacter:Destroy()
+ end)
+Player.CharacterAppearanceLoaded:Connect(RealCharacterDied)
+local PseudoAnchor
+game:GetService "RunService".RenderStepped:Connect(
+  function()
+      if PseudoAnchor ~= nil then
+          PseudoAnchor.CFrame = Part.CFrame * CFrame.new(0, 5, 0)
+      end
+       if NoClip then
+      FakeCharacter.Humanoid:ChangeState(11)
+       end
+  end
+)
+
+PseudoAnchor = FakeCharacter.HumanoidRootPart
+local function Invisible()
+  if IsInvisible == false then
+      local StoredCF = RealCharacter.HumanoidRootPart.CFrame
+      RealCharacter.HumanoidRootPart.CFrame = FakeCharacter.HumanoidRootPart.CFrame
+      FakeCharacter.HumanoidRootPart.CFrame = StoredCF
+      RealCharacter.Humanoid:UnequipTools()
+      Player.Character = FakeCharacter
+      workspace.CurrentCamera.CameraSubject = FakeCharacter.Humanoid
+      PseudoAnchor = RealCharacter.HumanoidRootPart
+      for i, v in pairs(FakeCharacter:GetChildren()) do
+          if v:IsA("LocalScript") then
+              v.Disabled = false
+          end
+      end
+
+      IsInvisible = true
+  else
+      local StoredCF = FakeCharacter.HumanoidRootPart.CFrame
+      FakeCharacter.HumanoidRootPart.CFrame = RealCharacter.HumanoidRootPart.CFrame
+     
+      RealCharacter.HumanoidRootPart.CFrame = StoredCF
+     
+      FakeCharacter.Humanoid:UnequipTools()
+      Player.Character = RealCharacter
+      workspace.CurrentCamera.CameraSubject = RealCharacter.Humanoid
+      PseudoAnchor = FakeCharacter.HumanoidRootPart
+      for i, v in pairs(FakeCharacter:GetChildren()) do
+          if v:IsA("LocalScript") then
+              v.Disabled = true
+          end
+      end
+      IsInvisible = false
+  end
+end
+
+game:GetService("UserInputService").InputBegan:Connect(
+  function(key, gamep)
+      if gamep then
+          return
+      end
+      if key.KeyCode.Name:lower() == Keybind:lower() and CanInvis and RealCharacter and FakeCharacter then
+          if RealCharacter:FindFirstChild("HumanoidRootPart") and FakeCharacter:FindFirstChild("HumanoidRootPart") then
+              Invisible()
+          end
+      end
+  end
+)
+local Sound = Instance.new("Sound",game:GetService("SoundService"))
+Sound.SoundId = "rbxassetid://232127604"
+Sound:Play()
+game:GetService("StarterGui"):SetCore("SendNotification",{["Title"] = "DryDex Inv Loaded",["Text"] = "Press "..Keybind.." to become change visibility.",["Duration"] = 20,["Button1"] = "Alr bro"})
+
+task.defer(function()
+	local Players = game:GetService("Players")
+	local RunService = game:GetService("RunService")
+	local player = Players.LocalPlayer or Players:GetPlayers()[1]
+	if not player then return end
+
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "BouncingLogoGui"
+	gui.ResetOnSpawn = false
+	gui.IgnoreGuiInset = true
+	gui.Parent = player:WaitForChild("PlayerGui")
+
+	local imageLabel = Instance.new("ImageLabel")
+	imageLabel.Name = "BouncingLogo"
+	imageLabel.Image = "rbxassetid://106074272060342"
+	imageLabel.BackgroundTransparency = 1
+	imageLabel.Size = UDim2.new(0, 214, 0, 100)
+	imageLabel.Position = UDim2.new(0.4, 0, 0.4, 0)
+	imageLabel.Parent = gui
+
+	local speed = Vector2.new(100, 75)
+	local direction = Vector2.new(1, 1)
+	local lastTime = tick()
+
+	RunService.RenderStepped:Connect(function()
+		local now = tick()
+		local delta = now - lastTime
+		lastTime = now
+
+		local pos = imageLabel.Position
+		local size = imageLabel.Size
+		local screenSize = gui.AbsoluteSize
+
+		local newX = pos.X.Offset + direction.X * speed.X * delta
+		local newY = pos.Y.Offset + direction.Y * speed.Y * delta
+
+		if newX <= 0 then
+			newX = 0
+			direction = Vector2.new(-direction.X, direction.Y)
+		elseif newX + size.X.Offset >= screenSize.X then
+			newX = screenSize.X - size.X.Offset
+			direction = Vector2.new(-direction.X, direction.Y)
+		end
+
+		if newY <= 0 then
+			newY = 0
+			direction = Vector2.new(direction.X, -direction.Y)
+		elseif newY + size.Y.Offset >= screenSize.Y then
+			newY = screenSize.Y - size.Y.Offset
+			direction = Vector2.new(direction.X, -direction.Y)
+		end
+
+		imageLabel.Position = UDim2.new(0, newX, 0, newY)
+	end)
+end)
+
+task.defer(function()
+	local Players = game:GetService("Players")
+	local TweenService = game:GetService("TweenService")
+	local RunService = game:GetService("RunService")
+
+	local player = Players.LocalPlayer
+	if not player then return end
+
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "InfoBoxGui"
+	gui.ResetOnSpawn = false
+	gui.IgnoreGuiInset = true
+	gui.Parent = player:WaitForChild("PlayerGui")
+
+	local frame = Instance.new("Frame")
+	frame.Name = "InfoFrame"
+	frame.AnchorPoint = Vector2.new(1, 0.5)
+	frame.Position = UDim2.new(1, -20, 0.5, 0)
+	frame.Size = UDim2.new(0, 300, 0, 170)
+	frame.BackgroundColor3 = Color3.new(0, 0, 0)
+	frame.BackgroundTransparency = 0.2
+	frame.BorderSizePixel = 0
+	frame.Parent = gui
+
+	local uicorner = Instance.new("UICorner")
+	uicorner.CornerRadius = UDim.new(0, 10)
+	uicorner.Parent = frame
+
+	local closeBtn = Instance.new("TextButton")
+	closeBtn.Name = "CloseButton"
+	closeBtn.Text = "X"
+	closeBtn.Font = Enum.Font.GothamBold
+	closeBtn.TextColor3 = Color3.new(1, 1, 1)
+	closeBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	closeBtn.Size = UDim2.new(0, 30, 0, 30)
+	closeBtn.Position = UDim2.new(1, -35, 0, 5)
+	closeBtn.BackgroundTransparency = 0.2
+	closeBtn.BorderSizePixel = 0
+	closeBtn.Parent = frame
+
+	local btnCorner = Instance.new("UICorner")
+	btnCorner.CornerRadius = UDim.new(1, 0)
+	btnCorner.Parent = closeBtn
+
+	local langBtn = Instance.new("TextButton")
+	langBtn.Name = "LangSwitch"
+	langBtn.Text = "ES"
+	langBtn.Font = Enum.Font.GothamSemibold
+	langBtn.TextColor3 = Color3.new(1, 1, 1)
+	langBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	langBtn.Size = UDim2.new(0, 40, 0, 25)
+	langBtn.Position = UDim2.new(0, 10, 1, -35)
+	langBtn.BackgroundTransparency = 0.2
+	langBtn.BorderSizePixel = 0
+	langBtn.Parent = frame
+
+	local langBtnCorner = Instance.new("UICorner")
+	langBtnCorner.CornerRadius = UDim.new(1, 0)
+	langBtnCorner.Parent = langBtn
+
+	local label = Instance.new("TextLabel")
+	label.Name = "ShakyLabel"
+	label.Text = ""
+	label.Font = Enum.Font.Arcade
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.BackgroundTransparency = 1
+	label.TextScaled = true
+	label.Size = UDim2.new(1, -20, 1, -60)
+	label.Position = UDim2.new(0, 10, 0, 10)
+	label.TextWrapped = true
+	label.Parent = frame
+
+	-- Traducciones
+	local currentLang = "ES"
+	local translations = {
+		ES = "Toca la tecla [G] para volverte invisible.",
+		EN = "Pres the [G] key to be invisible.",
+	}
+
+	label.Text = translations[currentLang]
+
+	-- Temblor
+	local originalPos = label.Position
+	local shakeMagnitude = 1.5
+
+	local function updateShake()
+		local x = math.random(-shakeMagnitude * 10, shakeMagnitude * 10) / 10
+		local y = math.random(-shakeMagnitude * 10, shakeMagnitude * 10) / 10
+		label.Position = originalPos + UDim2.new(0, x, 0, y)
+	end
+
+	local shakeConnection = RunService.RenderStepped:Connect(updateShake)
+
+	-- Cerrar
+	closeBtn.MouseButton1Click:Connect(function()
+		if shakeConnection then
+			shakeConnection:Disconnect()
+		end
+		frame:TweenPosition(
+			UDim2.new(1, 310, 0.5, 0),
+			Enum.EasingDirection.Out,
+			Enum.EasingStyle.Quad,
+			0.4,
+			true,
+			function()
+				gui:Destroy()
+			end
+		)
+	end)
+
+	-- Cambio de idioma
+	langBtn.MouseButton1Click:Connect(function()
+		currentLang = (currentLang == "ES") and "EN" or "ES"
+		label.Text = translations[currentLang]
+		langBtn.Text = currentLang
+	end)
+end)
